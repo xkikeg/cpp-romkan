@@ -1,0 +1,51 @@
+.PHONY: clean
+
+INC_DIR = $(dir include)
+SRC_DIR = $(dir src)
+TEST_DIR = $(dir test)
+GTEST_DIR = $(dir googletest)
+
+LIBTARGET = $(file $(SRC_DIR)/libromkan)
+
+CXXFLAGS += -std=c++0x -g -Wall -Wextra
+INCLUDES += $(INC_DIR)
+
+.SUBDIRS: $(SRC_DIR)
+	CXXFILES[] = $(removesuffix $(filter %.cpp, $(ls R, .)))
+
+	MAINLIB = $(StaticCXXLibrary $(LIBTARGET), $(CXXFILES))
+
+	.DEFAULT: $(MAINLIB)
+
+.SUBDIRS: $(TEST_DIR)
+	TEST_CXXFILES[] = $(removesuffix $(filter %.cpp, $(ls R, .)))
+
+	ln-if-not-exist(source, target) =
+		if $(not $(and $(file-exists $(target)), \
+			$(equal $(readlink $(target)), $(source))))
+			ln-or-cp $(source) $(target)
+
+	INCLUDES += $(GTEST_DIR) $(GTEST_DIR)/include
+
+	gtest-all.cc:
+		$(ln-if-not-exist $(GTEST_DIR)/src/$@, $@)
+
+	gtest_main.cc:
+		$(ln-if-not-exist $(GTEST_DIR)/src/$@, $@)
+
+	GEN_FILES = $(CGeneratedFiles gtest-all.cc gtest_main.cc)
+
+	GTEST_LIB = $(StaticCXXLibrary libgtest, gtest-all)
+	GTEST_MAIN = $(StaticCXXLibrary libgtest_main, gtest_main)
+
+	section
+		LIBS += $(LIBTARGET) libgtest_main libgtest
+		LDFLAGS += -lpthread
+		TEST = $(CXXProgram test, $(TEST_CXXFILES))
+		export
+	.DEFAULT: $(GTEST_LIB) $(TEST)
+
+.DEFAULT: $(SRC_DIR) $(TEST_DIR)
+
+clean:
+	rm $(filter-proper-targets $(ls R, .))

@@ -10,3 +10,7 @@
 *.lai
 *.la
 *.a
+
+# test files
+test/gtest*
+test/test
